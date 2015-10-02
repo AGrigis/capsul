@@ -13,12 +13,19 @@ from capsul.process import IProcess
 def split_name(process_name):
     """ Split a process name.
 
+    Note that only one iterative level is supported at the moment.
+
     Parameters
     ----------
+    process_name: str (mandatory)
+        the process flatten name.
+
+    Returns
+    -------
     identifier: int
         the execution identifier.
     box_name: str
-        the box name.
+        the box flatten name.
     box_exec_name: str
         if an iterative box is detected returned his execution id,
         None otherwise.
@@ -31,8 +38,9 @@ def split_name(process_name):
     identifier, box_name = process_name.split("-")
     identifier = int(identifier)
     if IProcess.itersep in box_name:
-        box_exec_name = box_name.split(".")[0]
-        box_iter_name, iteration = box_exec_name.split(IProcess.itersep)
+        box_iter_name, iter_id = box_name.split(IProcess.itersep)
+        iteration = iter_id.split(".")[0]
+        box_exec_name = box_iter_name + IProcess.itersep + iteration
         iteration = int(iteration)
     else:
         box_exec_name = None

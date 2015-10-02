@@ -168,6 +168,25 @@ class TestLoadFromDescription(unittest.TestCase):
         self.assertEqual(pipeline.output1, 62.5)
         self.assertEqual(pipeline.output2, [31.25, 11.25])
 
+        # Test iterative pipeline assembly
+        pipeline = get_process_instance("capsul.demo.sub_iter_pipeline.xml")
+
+        # Parametrize
+        pipeline.input1 = [[2.5], [1.5]]
+        pipeline.input2 = ["a", "b"]
+        pipeline.input3 = [2.5]
+        pipeline.constant = 2
+
+        # Test execution
+        print "\n\n\nSTART\n\n\n"
+        study_config = StudyConfig(
+            output_directory=tempfile.mkdtemp(),
+            number_of_cpus=self.nb_cpus,
+            generate_logging=True,
+            use_scheduler=True)
+        study_config.run(pipeline, verbose=self.verbose)
+        self.assertEqual(pipeline.output1, 62.5)
+
         if 0:
             from PySide import QtGui
             import sys

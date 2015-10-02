@@ -91,11 +91,12 @@ class IProcess(Controller):
 
         # Set outputs
         for control_name, value in generated_outputs.items():
-            if (numpy.asarray(value) == value[0]).all():
+            if len(value) > 0 and (numpy.asarray(value) == value[0]).all():
                 setattr(self, control_name, value[0])
             else:
-                raise ValueError("Impossible to set the ouput control '{0}', "
-                    "arguments are different {1}.".format(control_name, value)) 
+                raise ValueError("Impossible to set the regular output control "
+                    "'{0}' defined in the iterative box, arguments in '{1}' "
+                    "are different or empty.".format(control_name, value)) 
         for control_name, value in generated_iteroutputs.items():
             setattr(self, self.iterprefix + control_name, value)
 

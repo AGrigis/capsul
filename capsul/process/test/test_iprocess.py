@@ -152,6 +152,26 @@ class TestIProcess(unittest.TestCase):
         self.assertTrue(pipeline.output1 in [15, 25])
         self.assertTrue(set(pipeline.output2).issubset([31.25, 11.25]))
 
+        # Test iterative pipeline assembly
+        pipeline = get_process_instance("capsul.demo.sub_iter_pipeline.xml")
+
+        # Parametrize
+        pipeline.input1 = [[2.5], [1.5]]
+        pipeline.input2 = ["a", "b"]
+        pipeline.input3 = [2.5]
+        pipeline.constant = 2
+
+        # Test graph structure
+        graph, inlinkreps, outlinkreps = pipeline._create_graph(
+            pipeline, filter_inactive=True)
+        ordered_boxes = [item[0] for item in graph.topological_sort()]
+        ordered_boxes.pop(ordered_boxes.index("p1.p3"))
+        self.assertEqual(ordered_boxes, ["p1.p1", "p1.p2", "p2"])
+
+        # Test execution
+        pipeline()
+        self.assertTrue(pipeline.output1 in [62.5, 37.5])
+
         if 0:
             from PySide import QtGui
             import sys
