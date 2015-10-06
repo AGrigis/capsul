@@ -13,8 +13,6 @@ from capsul.process import IProcess
 def split_name(process_name):
     """ Split a process name.
 
-    Note that only one iterative level is supported at the moment.
-
     Parameters
     ----------
     process_name: str (mandatory)
@@ -38,7 +36,12 @@ def split_name(process_name):
     identifier, box_name = process_name.split("-")
     identifier = int(identifier)
     if IProcess.itersep in box_name:
-        box_iter_name, iter_id = box_name.split(IProcess.itersep)
+        id_items = box_name.split(IProcess.itersep)
+        if len(id_items) == 2:
+            box_iter_name, iter_id = id_items
+        else:
+            box_iter_name = IProcess.itersep.join(id_items[:-1])
+            iter_id = id_items[-1]         
         iteration = iter_id.split(".")[0]
         box_exec_name = box_iter_name + IProcess.itersep + iteration
         iteration = int(iteration)
