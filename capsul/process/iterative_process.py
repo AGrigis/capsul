@@ -35,10 +35,6 @@ class IProcess(Controller):
 
         Parameters
         ----------
-        pipeline: Pipeline (mandatory)
-            the pipeline object where the node is added
-        name: str (mandatory)
-            the node name
         process: instance
             a process/interface instance.
         iterinputs: list of str (optional, default None)
@@ -54,6 +50,7 @@ class IProcess(Controller):
         if "Pipeline" in [klass.__name__ for klass in process.__class__.__mro__]:
             self.ispbox = True
         self.active = True
+        self._states = {}
 
         # Create the bbox name
         self.name = self.iterprefix + self.iterbox.name
@@ -78,10 +75,10 @@ class IProcess(Controller):
                 generated_outputs[control_name] = []
 
         # Parametrize the iterative bbox input parameters
-        for box_name, struct in self.itergraphs().items():
-            graph, box = struct
+        for box_name, graph in self.itergraphs().items():
 
             # Execute the box
+            box = self.iterbox
             box(*args, **kwargs)
             for control_name, value in box.get_outputs().items():
                 if control_name in generated_iteroutputs:
@@ -104,13 +101,42 @@ class IProcess(Controller):
     # Public Members
     ###########################################################################
 
+    def dump_state(self, node_name):
+        """ Update the image of the iterative box state.
+
+        Parameters
+        ----------
+        node_name: str (mandatory)
+            the name of the state to update.
+        """
+        if node_name not in self._states:
+            raise ValueError(
+                "'{0}' is not a valid state. State value must be in "
+                "'{1}'.".format(node_name, self._states.keys()))
+        self._states[node_name] = self.iterbox.dump_state()
+
+    def load_state(self, node_name):
+        """ Restore the iterative box state.
+
+        Parameters
+        ----------
+        node_name: str (mandatory)
+            the name of the state to restore.
+        """
+        if node_name not in self._states:
+            raise ValueError(
+                "'{0}' is not a valid state. State value must be in "
+                "'{1}'.".format(node_name, self._states.keys()))
+        self.iterbox.load_state(self._states[node_name])  
+
     def update_iteroutputs(self, iterboxes):
         """ Update the IProcess standard/iterative output control values.
 
         Parameters
         ----------
-        iterboxes: list of box (mandatory)
-            the executed iterative boxes used to update the ibox outputs.
+        iterboxes: list of str (mandatory)
+            the sorted executed iterative boxe names used to update the ibox
+            outputs.
         """
         # Update all the ibox outputs
         for control_name in self.traits(output=True):
@@ -118,7 +144,9 @@ class IProcess(Controller):
             # Get the non iterative control name and the iterative boxes
             # outputs
             control_name = control_name.replace(self.iterprefix, "")
-            itervalue = [getattr(box, control_name) for box in iterboxes]
+            itervalue = [
+                self._states[box_name]["__self_outputs__"][control_name]
+                for box_name in iterboxes]
 
             # Update the ibox outputs: a standard ibox control is set only if
             # all the iterative jobs have returned the same value
@@ -145,8 +173,7 @@ class IProcess(Controller):
         -------
         itergraphs: dictionary
             the iterative pipeline's graph representations. Each value is
-            a 2-uplet containing a graph and the corresponding process or
-            pipeline.
+            contains a graph.
         """
         # Update the iterative pipeline only if all the input terative
         # controls have the same number of elements
@@ -166,33 +193,33 @@ class IProcess(Controller):
         if is_valid:
 
             # Create the requested number of graphs
+            self._states = {}
             for iteritem in range(nb_of_inputs):
 
-                # Copy and parametrize the iterative box
-                iterbox = type(self.iterbox)()
+                # Parametrize the iterative box and save the current state
                 for control_name in self.iterinputs:
                     itercontrol_name = self.iterprefix + control_name
                     value = getattr(self, itercontrol_name)
-                    setattr(iterbox, control_name, value[iteritem])
-                for control_name in self.iterbox.traits(output=False):
+                    setattr(self.iterbox, control_name, value[iteritem])
+                for control_name in self.traits(output=False):
                     if control_name not in self.iterinputs:
-                        setattr(iterbox, control_name,
+                        setattr(self.iterbox, control_name,
                                 getattr(self, control_name))
-                if (hasattr(self.iterbox, "inputs_to_copy") and
-                        hasattr(self.iterbox, "inputs_to_clean")):
-                    iterbox.inputs_to_copy = self.iterbox.inputs_to_copy
-                    iterbox.inputs_to_clean = self.iterbox.inputs_to_clean
 
                 node_name = "{0}{1}{2}".format(prefix, self.itersep, iteritem)
                 # Iterate on a pipeline
                 if self.ispbox:
                     itergraph, _, _ = self.iterbox._create_graph(
-                        iterbox, prefix=node_name + ".", filter_inactive=True)
+                        self.iterbox, prefix=node_name + ".",
+                        filter_inactive=True)
                 # Iterate on a process
                 else:
                     itergraph = Graph()
-                    itergraph.add_node(GraphNode(node_name, iterbox))
-                itergraphs[node_name] = (itergraph, iterbox)
+                    itergraph.add_node(GraphNode(node_name, self.iterbox))
+                itergraphs[node_name] = itergraph
+
+                # Save the current pipeline state
+                self._states[node_name] = self.iterbox.dump_state()
 
         return itergraphs
 
@@ -215,6 +242,32 @@ class IProcess(Controller):
 
         # Set the new trait value
         setattr(self, name, value)
+
+    def get_inputs(self):
+        """ Method to access the process inputs.
+
+        Returns
+        -------
+        outputs: dict
+            a dictionary with all the input trait names and values.
+        """
+        output = {}
+        for trait_name, trait in self.traits(output=False).iteritems():
+            output[trait_name] = getattr(self, trait_name)
+        return output
+
+    def get_outputs(self):
+        """ Method to access the process outputs.
+
+        Returns
+        -------
+        outputs: dict
+            a dictionary with all the output trait names and values.
+        """
+        output = {}
+        for trait_name, trait in self.traits(output=True).iteritems():
+            output[trait_name] = getattr(self, trait_name)
+        return output
 
     ###########################################################################
     # Private Members

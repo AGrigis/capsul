@@ -161,6 +161,39 @@ class AutoPipeline(Pipeline):
         """
         pass
 
+    def dump_state(self):
+        """ Get an image of the pipeline state.
+
+        The '__self_inputs__' and '__self_outputs__' keys are reserved for
+        the primary pipeline state.
+
+        Returns
+        -------
+        state: dict
+            a dictionary containing the pipeline controls values.
+        """
+        state = {}
+        state["__self_inputs__"] = self.get_inputs()
+        state["__self_outputs__"] = self.get_outputs()
+        for node in self.all_nodes():
+            traits = node.process.get_inputs()
+            traits.update(node.process.get_outputs())
+            state[node] = traits
+        return state
+
+    def load_state(self, state):
+        """ Restore a pipeline state.
+
+        Parameters
+        ----------
+        state: dict (mandatory)
+            a dictionary containing the pipeline controls values.
+        """
+        for node, traits in state.iteritems():
+            if not isinstance(node, basestring):
+                for name, value in traits.iteritems():
+                    node.process.set_parameter(name, value)  
+
     ###########################################################################
     # Private Members
     ###########################################################################
@@ -227,12 +260,11 @@ class AutoPipeline(Pipeline):
                 # Update the input graph and the execution list
                 iter_map[box_name] = []
                 iterboxes = []
-                for itername, iteritem in itergraphs.items():
-                    itergraph, iterbox = iteritem
+                for itername, itergraph in itergraphs.items():
                     graph.add_graph(itergraph)
                     _, iteration = itername.split(IProcess.itersep)
                     iteration = int(iteration)
-                    iterboxes.append((iteration, iterbox))
+                    iterboxes.append((iteration, itername))
                     iter_map[box_name].extend(
                         [node.name for node in itergraph._nodes.values()])
                 iterboxes = sorted(iterboxes, key=lambda item: item[0])

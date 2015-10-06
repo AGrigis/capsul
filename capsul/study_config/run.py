@@ -307,10 +307,21 @@ def scheduler(pbox, cpus=1, outputdir=None, cachedir=None, log_file=None,
             # Add nnil boxes to the input queue
             if toexec_box_names is not None:
                 for box_name in toexec_box_names:
+
+                    # Create process name and get the box to execute
                     process_name = "{0}-{1}".format(global_counter, box_name)
                     inexec_box_names[box_name] = process_name
                     box = exec_graph.find_node(box_name).meta
                     global_counter += 1
+
+                    # Restore iterative box state
+                    (identifier, box_name, box_exec_name,
+                     box_iter_name, iteration) = split_name(process_name)
+                    if box_iter_name in iter_map:
+                        ibox = exec_graph.find_node(box_iter_name).meta
+                        ibox.load_state(box_exec_name)
+
+                    # Get box inputs
                     box_inputs = {}
                     for control_name in box.traits(output=False):
                         box_inputs[control_name] = box.get_parameter(control_name)
@@ -320,6 +331,8 @@ def scheduler(pbox, cpus=1, outputdir=None, cachedir=None, log_file=None,
                             hasattr(box, "inputs_to_clean")):
                         box_copy = box.inputs_to_copy
                         box_clean = box.inputs_to_clean
+
+                    # Update the worker queu
                     workers_bbox.put((process_name, box.desc, box_inputs,
                                       box_copy, box_clean))
 
@@ -336,19 +349,25 @@ def scheduler(pbox, cpus=1, outputdir=None, cachedir=None, log_file=None,
             process_name = list(wave_returncode.keys())[0]
             (identifier, box_name, box_exec_name,
              box_iter_name, iteration) = split_name(process_name)
+            is_iterative = False
+            if box_iter_name in iter_map:
+                ibox = exec_graph.find_node(box_iter_name).meta
+                is_iterative = True
+                ibox.load_state(box_exec_name)
             box = exec_graph.find_node(box_name).meta
             exec_graph.remove_node(box_name)
             for name, value in wave_returncode[process_name]["info"][
                     "outputs"].items():
                 box.set_parameter(name, value)
+            if is_iterative:
+                ibox.dump_state(box_exec_name)
 
             # Update the iterative mapping, update the graph and IProcess
             # if an iterative job is done
-            if box_iter_name in iter_map:
+            if is_iterative:
                 position = iter_map[box_iter_name].index(box_name)
                 iter_map[box_iter_name].pop(position)
                 if len(iter_map[box_iter_name]) == 0:
-                    ibox = exec_graph.find_node(box_iter_name).meta
                     ibox.update_iteroutputs(box_map.pop(box_iter_name))
                     iter_map.pop(box_iter_name)
                     exec_graph.remove_node(box_iter_name)

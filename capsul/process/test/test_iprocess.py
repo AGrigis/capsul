@@ -85,7 +85,9 @@ class TestIProcess(unittest.TestCase):
         itergraphs = self.myiprocess.itergraphs()
         for cnt, value in enumerate(self.myiprocess.iterparameter2):
             key = IProcess.itersep + str(cnt)
-            graph, process = itergraphs[key]
+            graph = itergraphs[key]
+            self.myiprocess.load_state(key)
+            process = self.myiprocess.iterbox
             self.assertEqual(process.parameter1, [2.5])
             self.assertEqual(process.parameter2, value)
             self.assertEqual(process.parameter3, 5)
@@ -130,9 +132,12 @@ class TestIProcess(unittest.TestCase):
         iterkeys = ["p1" + IProcess.itersep + "0", "p1" + IProcess.itersep + "1"]
         self.assertEqual(sorted(itergraphs.keys()), iterkeys)
         for index, value in enumerate(pipeline.input1):
-            self.assertEqual(itergraphs[iterkeys[index]][1].parameter1, value)
+            myiprocess = pipeline.nodes["p1"].process
+            myiprocess.load_state(iterkeys[index])
+            process = myiprocess.iterbox
+            self.assertEqual(process.parameter1, value)
             ordered_nodes = [item[0]
-                for item in itergraphs[iterkeys[index]][0].topological_sort()]
+                for item in itergraphs[iterkeys[index]].topological_sort()]
             self.assertEqual(ordered_nodes, [iterkeys[index]])
 
         # Test contained iterative graph structures
@@ -141,9 +146,12 @@ class TestIProcess(unittest.TestCase):
         iterkeys = ["p3" + IProcess.itersep + "0", "p3" + IProcess.itersep + "1"]
         self.assertEqual(sorted(itergraphs.keys()), iterkeys)
         for index, value in enumerate(pipeline.input1):
-            self.assertEqual(itergraphs[iterkeys[index]][1].input1, value)
+            myiprocess = pipeline.nodes["p3"].process
+            myiprocess.load_state(iterkeys[index])
+            process = myiprocess.iterbox
+            self.assertEqual(process.input1, value)
             ordered_nodes = [item[0]
-                for item in itergraphs[iterkeys[index]][0].topological_sort()]
+                for item in itergraphs[iterkeys[index]].topological_sort()]
             self.assertEqual(
                 ordered_nodes, [iterkeys[index] + ".p1", iterkeys[index] + ".p2"])
 

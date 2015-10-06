@@ -177,8 +177,14 @@ class TestLoadFromDescription(unittest.TestCase):
         pipeline.input3 = [2.5]
         pipeline.constant = 2
 
+        # Save state
+        state = pipeline.dump_state()
+
+        # Modify something but restore previous state
+        pipeline.input1 = [[2.0], [1.5]]
+        pipeline.load_state(state)
+
         # Test execution
-        print "\n\n\nSTART\n\n\n"
         study_config = StudyConfig(
             output_directory=tempfile.mkdtemp(),
             number_of_cpus=self.nb_cpus,

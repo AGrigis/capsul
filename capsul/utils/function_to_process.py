@@ -49,6 +49,35 @@ class AutoProcess(Process):
         if hasattr(self, "_id"):
             self.id = self._id
 
+    def dump_state(self):
+        """ Get an image of the process state.
+
+        The '__self_inputs__' and '__self_outputs__' keys are reserved for
+        the primary process state.
+
+        Returns
+        -------
+        state: dict
+            a dictionary containing the process controls values.
+        """
+        state = self.get_inputs()
+        state.update(self.get_outputs())
+        state["__self_inputs__"] = self.get_inputs()
+        state["__self_outputs__"] = self.get_outputs()
+        return state
+
+    def load_state(self, state):
+        """ Restore a process state.
+
+        Parameters
+        ----------
+        state: dict (mandatory)
+            a dictionary containing the process controls values.
+        """
+        for name, value in state.iteritems():
+            if not name in ["__self_inputs__", "__self_outputs__"]:
+                self.set_parameter(name, value)  
+
     def _run_process(self):
         """ Execute the AutoProcess class.
         """
