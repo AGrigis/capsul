@@ -288,13 +288,15 @@ def scheduler(pbox, cpus=1, outputdir=None, cachedir=None, log_file=None,
     # Use a FIFO strategy to deal with multiple boxes
     iter_map = {}
     box_map = {}
-    pbox._update_graph(exec_graph, iter_map, box_map)
-    toexec_box_names = available_boxes(exec_graph)
     inexec_box_names = {}
     returncode = {}
     global_counter = 1
     workers_finished = 0
     try:
+        # Update the execution graph and get the parent nnil boxes
+        pbox._update_graph(exec_graph, iter_map, box_map)
+        toexec_box_names = available_boxes(exec_graph)
+
         # Assert something has to be executed
         if len(toexec_box_names) == 0:
             raise Exception("Nothing to execute.")
