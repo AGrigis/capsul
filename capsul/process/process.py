@@ -22,13 +22,15 @@ import shutil
 logger = logging.getLogger(__name__)
 
 # Trait import
-from traits.trait_base import _Undefined
-from traits.api import Directory, Undefined
+from traits.api import Directory
+from traits.api import Undefined
+from traits.api import Event
 from traits.trait_handlers import BaseTraitHandler
 
 # Soma import
 from soma.controller import Controller
 from soma.controller import trait_ids
+from soma.controller.controller import ControllerTrait
 from soma.utils import LateBindingProperty
 from soma.controller.trait_utils import is_trait_value_defined
 from soma.controller.trait_utils import is_trait_pathname
@@ -37,6 +39,7 @@ from soma.controller.trait_utils import get_trait_desc
 # Capsul import
 from capsul.utils.version_utils import get_tool_version
 from capsul.utils.trait_utils import is_trait_either
+from capsul.utils.trait_utils import allow_none_trait_values
 
 
 class ProcessMeta(Controller.__metaclass__):
@@ -159,18 +162,6 @@ class Process(Controller):
 
         # Define reserved control names
         self.reserved_controls = ("nodes_activation", "selection_changed")
-
-    def add_trait(self, name, trait):
-        """Ensure that trait.output and trait.optional are set to a
-        boolean value before calling parent class add_trait.
-        """
-        if trait._metadata is not None:
-            trait._metadata['output'] = bool(trait.output)
-            trait._metadata['optional'] = bool(trait.optional)
-        else:
-            trait.output = bool(trait.output)
-            trait.optional = bool(trait.optional)
-        super(Process, self).add_trait(name, trait)
 
     def traits(self, **kwargs):
         """ Returns a dictionary containing the definitions of all of the trait
@@ -370,6 +361,58 @@ class Process(Controller):
     ####################################################################
     # Public methods
     ####################################################################
+
+    def add_trait(self, name, trait):
+        """ Add a new trait allowing None values during the validation.
+
+        Ensure that trait.output and trait.optional are set to a
+        boolean value before calling parent class add_trait.
+
+        Parameters
+        ----------
+        name: str (mandatory)
+            the trait name.
+        trait: traits.api (mandatory)
+            a valid trait.
+        """
+        # Ensure that trait.output and trait.optional are set
+        if trait._metadata is not None:
+            trait._metadata['output'] = bool(trait.output)
+            trait._metadata['optional'] = bool(trait.optional)
+        else:
+            trait.output = bool(trait.output)
+            trait.optional = bool(trait.optional)
+
+        # Save the default value
+        default = trait.defaultvalue
+
+        # Allow None as a trait value
+        if self.is_user_trait(trait):
+            allow_none_trait_values(trait)
+
+        # Inheritance: create the instance trait attribute
+        super(Process, self).add_trait(name, trait)
+
+        # Set the trait default value
+        self.trait(name).defaultvalue = default
+
+    def is_user_trait(self, trait):
+        """ Method that evaluate if a trait is a user parameter
+        (i.e. not an Event or ControllerTrait).
+
+        Parameters
+        ----------
+        trait: Trait (mandatory)
+            a trait.
+
+        Returns
+        -------
+        out: bool
+            True if the trait is a user trait,
+            False otherwise.
+        """
+        return not (isinstance(trait.handler, Event) or
+                    isinstance(trait.handler, ControllerTrait)) 
 
     def save_log(self, returncode):
         """ Method to save process execution informations in json format.
@@ -704,8 +747,8 @@ class Process(Controller):
     def set_parameter(self, name, value):
         """ Method to set a process instance trait value.
 
-        For File and Directory traits the None value is replaced by the
-        special _Undefined trait value.
+        For File and Directory traits the Undefined value is replaced by the
+        special None trait value.
 
         Parameters
         ----------
@@ -714,9 +757,9 @@ class Process(Controller):
         value: object (mandatory)
             the trait value we want to set
         """
-        # The None trait value is Undefined, do the replacement
-        if value is None:
-            value = Undefined
+        # The Undefined trait value is None, do the replacement
+        if value is Undefined:
+            value = None
 
         # Set the new trait value
         setattr(self, name, value)
@@ -875,7 +918,7 @@ class FileCopyProcess(Process):
         if isinstance(python_object, dict):
             out = {}
             for key, val in python_object.items():
-                if val is not Undefined:
+                if val not in [Undefined, None]:
                     out[key] = self._copy_input_files(val)
 
         # Deal with tuple and list
@@ -884,7 +927,7 @@ class FileCopyProcess(Process):
         elif isinstance(python_object, (list, tuple)):
             out = []
             for val in python_object:
-                if val is not Undefined:
+                if val not in [Undefined, None]:
                     out.append(self._copy_input_files(val))
             if isinstance(python_object, tuple):
                 out = tuple(out)
@@ -893,7 +936,7 @@ class FileCopyProcess(Process):
         # a file
         else:
             out = python_object
-            if (python_object is not Undefined and
+            if (python_object not in [Undefined, None] and
                     isinstance(python_object, basestring) and
                     os.path.isfile(python_object)):
                 srcdir = os.path.dirname(python_object)
@@ -938,7 +981,7 @@ class FileCopyProcess(Process):
                     is_input = False
 
                 # Skip undefined trait attributes and outputs
-                if is_input and value is not Undefined:
+                if is_input and value not in [Undefined, None]:
 
                     # Store the input parameter
                     input_parameters[name] = value
@@ -1014,7 +1057,7 @@ class NipypeProcess(FileCopyProcess):
 
         # Add a new trait to store the processing output directory
         super(Process, self).add_trait(
-            "output_directory", Directory(Undefined, exists=True,
+            "output_directory", Directory(None, exists=True,
                                           optional=True))
 
     def __call__(self, **kwargs):

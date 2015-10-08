@@ -18,7 +18,7 @@ import traceback
 logger = logging.getLogger(__name__)
 
 # Trait import
-from traits.api import Directory, CTrait, Undefined
+from traits.api import CTrait
 
 # CAPSUL import
 from soma.controller.trait_utils import trait_ids

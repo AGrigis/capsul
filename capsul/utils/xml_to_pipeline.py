@@ -13,6 +13,7 @@ import re
 import json
 import inspect
 import warnings
+import types
 
 # CAPSUL import
 from .description_utils import load_xml_description
@@ -32,7 +33,6 @@ from capsul.process import IProcess
 
 # TRAIT import
 from traits.api import Enum
-from traits.api import Undefined
 
 
 class AutoPipeline(Pipeline):
@@ -59,6 +59,8 @@ class AutoPipeline(Pipeline):
         # Define class parameters
         self._switches = {}
         self._links = []
+
+        # Create the pipeline structure
         super(AutoPipeline, self).__init__(
             autoexport_nodes_parameters=False, **kwargs)
 
@@ -156,11 +158,6 @@ class AutoPipeline(Pipeline):
             self._anytrait_changed(switch_name, switch_values[0],
                                    switch_values[0])
 
-    def update_nodes_and_plugs_activation(self):
-        """ Activation is static.
-        """
-        pass
-
     def dump_state(self):
         """ Get an image of the pipeline state.
 
@@ -192,7 +189,16 @@ class AutoPipeline(Pipeline):
         for node, traits in state.iteritems():
             if not isinstance(node, basestring):
                 for name, value in traits.iteritems():
-                    node.process.set_parameter(name, value)  
+                    node.process.set_parameter(name, value)
+
+    ###########################################################################
+    # Patches
+    ###########################################################################
+
+    def update_nodes_and_plugs_activation(self):
+        """ Activation is static.
+        """
+        pass
 
     ###########################################################################
     # Private Members
@@ -568,12 +574,8 @@ class AutoPipeline(Pipeline):
         # Set the forced values
         process = self.nodes[box_name].process
         for name, value in optional_parameters.items():
-            if value is None:
-                value = Undefined
             process.set_parameter(name, value)
         for name, value in hidden_parameters.items():
-            if value is None:
-                value = Undefined
             setattr(process._nipype_interface.inputs, name, value)
 
     def _add_link(self, linkdesc, linktype="link"):

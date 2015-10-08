@@ -280,7 +280,7 @@ def workflow_from_pipeline(pipeline, study_config={}, disabled_nodes=None,
               process = node.process
           else:
               process = node
-          setattr(process, plug_name, Undefined)
+          setattr(process, plug_name, None)
 
     def _get_swf_paths(study_config):
         computing_resource = getattr(

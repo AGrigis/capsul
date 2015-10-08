@@ -22,13 +22,25 @@ from traits.api import Float, File
 class MyProcess(Process):
     """ My dummy process.
     """
-    # Some inputs
-    input_image = File(optional=False, desc="an image.")
-    input_float = Float(optional=True, desc="a float.")
+    def __init__(self):
+        # Inheritance
+        super(MyProcess, self).__init__()
 
-    # Some outputs
-    output_image = File(optional=False, output=True, desc="an output image.")
-    output_float = Float(optional=True, output=True, desc=None)
+        # Some inputs
+        self.add_trait(
+            "input_image",
+            File(optional=False, desc="an image."))
+        self.add_trait(
+            "input_float",
+            Float(optional=True, desc="a float."))
+
+        # Some outputs
+        self.add_trait(
+            "output_image",
+            File(optional=False, output=True, desc="an output image."))
+        self.add_trait(
+            "output_float",
+            Float(optional=True, output=True, desc=None))
 
 
 class MyPipeline(Pipeline):

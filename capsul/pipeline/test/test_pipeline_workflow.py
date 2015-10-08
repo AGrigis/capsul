@@ -16,6 +16,8 @@ from capsul.pipeline import Pipeline, PipelineNode
 from capsul.pipeline import pipeline_workflow
 from capsul.study_config.study_config import StudyConfig
 
+from traits.api import Undefined
+
 
 class DummyProcess(Process):
     """ Dummy Test Process
@@ -24,14 +26,14 @@ class DummyProcess(Process):
         super(DummyProcess, self).__init__()
 
         # inputs
-        self.add_trait("input", File(optional=False))
+        self.add_trait("input", File(optional=False, output=False))
 
         # outputs
-        self.add_trait("output", File(output=True))
+        self.add_trait("output", File(optional=False, output=True))
 
     def _run_process(self):
         self.output = self.input
-        self.output = self.output
+
 
 class DummyPipeline(Pipeline):
 
@@ -76,8 +78,7 @@ class TestPipelineWorkflow(unittest.TestCase):
         self.pipeline.output1 = '/tmp/file_out1.nii'
         self.pipeline.output2 = '/tmp/file_out2.nii'
         self.pipeline.output3 = '/tmp/file_out3.nii'
-        study_config = StudyConfig() #modules=StudyConfig.default_modules \
-                                   #+ ['FomConfig'])
+        study_config = StudyConfig()
         study_config.input_directory = '/tmp'
         study_config.somaworkflow_computing_resource = 'localhost'
         study_config.somaworkflow_computing_resources_config.localhost = {
@@ -109,6 +110,7 @@ class TestPipelineWorkflow(unittest.TestCase):
         wf = pipeline_workflow.workflow_from_pipeline(
             self.pipeline, study_config=self.study_config,
             create_directories=False)
+        #print len(wf.jobs), len(wf.dependencies)
         self.assertEqual(len(wf.jobs), 3)
         self.assertEqual(len(wf.dependencies), 0)
 

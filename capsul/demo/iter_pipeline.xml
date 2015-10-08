@@ -18,7 +18,7 @@
         </unit>
         <unit name="p3">
             <module>capsul.demo.pipeline.xml</module>
-            <set name="input2" value="None"/>
+            <set name="input2" value="'optional'"/>
             <set name="iteroutput1" value="None"/>
             <set name="output3" value="None"/>
             <iterinput name="input1"/>

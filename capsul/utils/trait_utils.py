@@ -508,3 +508,54 @@ def build_expression(trait):
         expression += "()"
 
     return expression
+
+
+def allow_none_trait_values(trait):
+    """ Alow None trait values.
+
+    Change the validate function unsing a monkey patch. This may slow
+    the validation process since the fast compiled validation method
+    may be replaced.
+
+    Parameters
+    ----------
+    trait: Trait (mandatory)
+        a trait.
+    """
+    # Get the trait class name
+    handler = trait.handler or trait
+    main_id = handler.__class__.__name__
+    if main_id == "TraitCoerceType":
+        real_id = _type_to_trait_id.get(handler.aType)
+        if real_id:
+            main_id = real_id
+
+    # Monkey patching: allow None value in the trait validation
+    # strategy
+    if hasattr(trait, "validate"):
+        def validate(self, object, name, value):
+            if value is None:
+                return value
+            return self.validate_core(object, name, value)
+        trait.validate_core = trait.validate
+        if hasattr(trait, "fast_validate"):
+            if trait.item_trait is not None:
+                trait.item_trait.handler.validate = types.MethodType(
+                    validate, trait.item_trait)
+            trait.fast_validate = types.MethodType(validate, trait)
+        else:
+            trait.validate = types.MethodType(validate, trait)
+
+    # Either case
+    if main_id in ["Either", "TraitCompound"]:
+
+        # Update each trait compound optional parameter
+        for sub_trait in handler.handlers:
+            allow_none_trait_values(sub_trait())
+
+    # Default case
+    else:
+
+        # FIXME may recurse indefinitely if the trait is recursive
+        for inner_trait in handler.inner_traits():
+            allow_none_trait_values(inner_trait)

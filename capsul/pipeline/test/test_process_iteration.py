@@ -25,8 +25,11 @@ from capsul.pipeline.process_iteration import ProcessIteration
 
 
 class WriteOutput(Process):
-    input_image = File()
-    output_image = File(output=True)
+
+    def __init__(self):
+        super(WriteOutput, self).__init__()
+        self.add_trait("input_image", File())
+        self.add_trait("output_image", File(output=True))
     
     def _run_process(self):
         # Copy input_image in output_image
@@ -34,10 +37,13 @@ class WriteOutput(Process):
 
 
 class ProcessSlice(Process):
-    input_image = File()
-    slice_number = Int()
-    output_image_dependency = File()
-    output_image = File(output=True)
+
+    def __init__(self):
+        super(ProcessSlice, self).__init__()
+        self.add_trait("input_image", File())
+        self.add_trait("slice_number", Int())
+        self.add_trait("output_image_dependency", File())
+        self.add_trait("output_image", File(output=True))
     
     def _run_process(self):
         file_size = os.stat(self.output_image).st_size

@@ -14,14 +14,17 @@ import numpy
 from capsul.utils.trait_utils import clone_trait
 from capsul.utils.trait_utils import is_trait_pathname
 from capsul.utils.trait_utils import trait_ids
+from capsul.utils.trait_utils import allow_none_trait_values
 from capsul.utils.topological_sort import GraphNode
 from capsul.utils.topological_sort import Graph
 
 # Soma import
 from soma.controller import Controller
+from soma.controller.controller import ControllerTrait
 
 # Trait import
 from traits.api import Undefined
+from traits.api import Event
 
 
 class IProcess(Controller):
@@ -100,6 +103,47 @@ class IProcess(Controller):
     ###########################################################################
     # Public Members
     ###########################################################################
+
+    def add_trait(self, name, *trait):
+        """ Add a new trait allowing None values during the validation.
+
+        Parameters
+        ----------
+        name: str (mandatory)
+            the trait name.
+        trait: traits.api (mandatory)
+            a valid trait.
+        """
+        # Save the default value
+        default = trait[0].defaultvalue
+
+        # Allow None as a trait value
+        if self.is_user_trait(trait[0]):
+            allow_none_trait_values(trait[0])
+
+        # Inheritance: create the instance trait attribute
+        super(IProcess, self).add_trait(name, *trait)
+
+        # Set the trait default value
+        self.trait(name).defaultvalue = default
+
+    def is_user_trait(self, trait):
+        """ Method that evaluate if a trait is a user parameter
+        (i.e. not an Event or ControllerTrait).
+
+        Parameters
+        ----------
+        trait: Trait (mandatory)
+            a trait.
+
+        Returns
+        -------
+        out: bool
+            True if the trait is a user trait,
+            False otherwise.
+        """
+        return not (isinstance(trait.handler, Event) or
+                    isinstance(trait.handler, ControllerTrait))
 
     def dump_state(self, node_name):
         """ Update the image of the iterative box state.
@@ -237,8 +281,8 @@ class IProcess(Controller):
             the trait value we want to set.
         """
         # Detect File and Directory trait types with None value
-        if value is None and is_trait_pathname(self.trait(name)):
-            value = Undefined
+        if value is Undefined and is_trait_pathname(self.trait(name)):
+            value = None
 
         # Set the new trait value
         setattr(self, name, value)

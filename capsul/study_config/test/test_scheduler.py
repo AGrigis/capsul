@@ -27,7 +27,7 @@ class TestLoadFromDescription(unittest.TestCase):
         self.verbose = 1
 
     def test_scheduled_pipeline(self):
-        """ Method to test the scheduler on a simple pipelines.
+        """ Method to test the scheduler on a simple pipeline.
         """
         print
 
@@ -36,6 +36,7 @@ class TestLoadFromDescription(unittest.TestCase):
         for node_name in ["", "p1", "p2"]:
             self.assertTrue(node_name in pipeline.nodes)
         pipeline.input1 = [2.5]
+        pipeline.input2 = "scheduler"
         scheduler(pipeline, cpus=self.nb_cpus, verbose=self.verbose)
         self.assertEqual(pipeline.output1, 12.5)
         self.assertEqual(pipeline.output2, 31.25)
@@ -47,6 +48,7 @@ class TestLoadFromDescription(unittest.TestCase):
             self.assertTrue(node_name in pipeline.nodes)
         pipeline.input1 = [2.5]
         pipeline.switch = "path1"
+        pipeline.input2 = "scheduler"
         scheduler(pipeline, cpus=self.nb_cpus, verbose=self.verbose)
         if pipeline.switch == "path2":
             self.assertEqual(pipeline.output, 78.125)
@@ -83,6 +85,7 @@ class TestLoadFromDescription(unittest.TestCase):
 
         pipeline.input1 = [2.5]
         pipeline.switch = "path2"
+        pipeline.input2 = "scheduler"
         scheduler(pipeline, cpus=self.nb_cpus, verbose=self.verbose)
         if pipeline.switch == "path2":
             self.assertEqual(pipeline.output, 195.3125)

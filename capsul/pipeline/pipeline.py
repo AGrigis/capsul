@@ -250,7 +250,6 @@ class Pipeline(Process):
         """
         # Add the trait
         super(Pipeline, self).add_trait(name, trait)
-        self.get(name)
 
         # If we insert a user trait, create the associated plug
         if getattr(self, 'pipeline_node', False) and self.is_user_trait(trait):
@@ -358,7 +357,7 @@ class Pipeline(Process):
                 node.plugs[parameter_name].optional = True
 
         # Create a trait to control the node activation (enable property)
-        self.nodes_activation.add_trait(name, Bool)
+        self.nodes_activation.add_trait(name, Bool())
         setattr(self.nodes_activation, name, node.enabled)
 
         # Observer
@@ -664,6 +663,7 @@ class Pipeline(Process):
         """
         # Get the node and parameter
         node = self.nodes[node_name]
+
         # Make a copy of the trait
         trait = Trait(node.get_trait(plug_name))
 
@@ -1626,7 +1626,7 @@ class Pipeline(Process):
         nodes: list ore sequence
             nodes contained in the step (Node instances)
         '''
-        if not self.user_traits().has_key('pipeline_steps'):
+        if not 'pipeline_steps' in self.traits():
             super(Pipeline, self).add_trait(
                 'pipeline_steps',
                 ControllerTrait(Controller, desc=

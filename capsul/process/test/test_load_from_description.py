@@ -63,6 +63,7 @@ class TestLoadFromDescription(unittest.TestCase):
         for node_name in ["", "p1", "p2"]:
             self.assertTrue(node_name in pipeline.nodes)
         pipeline.input1 = [2.5]
+        pipeline.input2 = "test"
         pipeline()
         self.assertEqual(pipeline.output1, 12.5)
         self.assertEqual(pipeline.output2, 31.25)
@@ -74,6 +75,7 @@ class TestLoadFromDescription(unittest.TestCase):
             self.assertTrue(node_name in pipeline.nodes)
         pipeline.input1 = [2.5]
         pipeline.switch = "path2"
+        pipeline.input2 = "test"
         pipeline()
         if pipeline.switch == "path3":
             self.assertEqual(pipeline.output, 31.25)
@@ -115,8 +117,8 @@ class TestLoadFromDescription(unittest.TestCase):
         self.assertTrue(isinstance(pipeline, Pipeline))
         for node_name in ["", "p1", "p2", "p3"]:
             self.assertTrue(node_name in pipeline.nodes)
-
         pipeline.input1 = [2.5]
+        pipeline.input2 = "test"
         pipeline.switch = "path2"
         pipeline()
         if pipeline.switch == "path2":

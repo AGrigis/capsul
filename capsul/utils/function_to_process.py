@@ -13,6 +13,7 @@ import xml.dom.minidom
 import inspect
 import re
 import importlib
+import traceback
 
 # Trait import
 import traits.api as traits
@@ -42,8 +43,11 @@ class AutoProcess(Process):
             self.trait(trait_name).desc = trait.desc
             self.trait(trait_name).optional = trait.optional
 
-        for trait_name, trait_value in self._defaults.items():
-            self.set_parameter(trait_name, trait_value)
+            # Enthought.traits does not validate default values: reapply them
+            if trait_name in self._defaults:
+                self.set_parameter(trait_name, self._defaults[trait_name])
+            else:
+                self.set_parameter(trait_name, None)
 
         # Redefine process identifier
         if hasattr(self, "_id"):
@@ -86,7 +90,14 @@ class AutoProcess(Process):
 
         # Execute it
         def f():
-            exec expression in namespace
+            try:
+                exec expression in namespace
+            except:
+                error = traceback.format_exc()
+                error += "From expression: {0}. ".format(expression)
+                error += ("A mandatory parameter has probably not "
+                          "been initialized.")
+                raise RuntimeError(error)
         f()
 
         # Update the user trait values
@@ -126,11 +137,11 @@ class AutoProcess(Process):
                     "description.".format(self.id, control_name, self.xml_tag))
             # Update namespace
             value = self.get_parameter(control_name)
-            if value is traits.Undefined:
-                value = None
-            namespace[control_name] = value
-            # Create kwargs
-            kwargs.append("{0}={0}".format(control_name))
+            if value not in [None, traits.Undefined]:
+
+                # Create kwargs
+                namespace[control_name] = value
+                kwargs.append("{0}={0}".format(control_name))
 
         # Deal with all function returned parameters
         for control_name in outputs:
@@ -251,8 +262,10 @@ def create_controls(proto, func):
         # Set default values
         if control_name in defaults:
             trait.optional = True
+            trait.defaultvalue = defaults[control_name]
         else:
             trait.optional = False
+            trait.defaultvalue = None
 
         # Split output controls
         if desc["role"] == "output":
