@@ -78,10 +78,16 @@ class IProcess(Controller):
                 generated_outputs[control_name] = []
 
         # Parametrize the iterative bbox input parameters
-        for box_name, graph in self.itergraphs().items():
+        graphs = self.itergraphs()
+        for iteration in range(len(graphs)):
+
+            # Get iteration parameters
+            box_name = "#{0}".format(iteration)
+            graph = graphs[box_name]
 
             # Execute the box
             box = self.iterbox
+            self.load_state(box_name)
             box(*args, **kwargs)
             for control_name, value in box.get_outputs().items():
                 if control_name in generated_iteroutputs:
