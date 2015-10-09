@@ -34,6 +34,7 @@ multiprocessing.log_to_stderr(logging.CRITICAL)
 logger = logging.getLogger(__file__)
 
 # Define scheduler constant messages
+FLAG_PROCESSING = b"WORK"
 FLAG_ALL_DONE = b"WORK_FINISHED"
 FLAG_WORKER_FINISHED_PROCESSING = b"WORKER_FINISHED_PROCESSING"
 
@@ -188,14 +189,20 @@ def scheduler(pbox, cpus=1, outputdir=None, cachedir=None, log_file=None,
 
     # The worker function of a capsul.Pocess, invoked in a
     # multiprocessing.Process
-    def bbox_worker(workers_bbox, workers_returncode, outputdir=None,
+    def bbox_worker(workers_bbox, tasks, workers_returncode, outputdir=None,
                     cachedir=None, verbose=1):
         """ The worker.
+
+        Use the 'workers_bbox' as a trigger to execute the jobs in the 'task'
+        proxy list (items are poped). The results are returned in the
+        'workers_returncode' queue.
 
         Parameters
         ----------
         workers_bbox, workers_returncode: multiprocessing.Queue
-            the input and output queues.
+            the input (signals) and output (results) queues.
+        tasks: multiprocessing.managers.ListProxy
+            the box description to execute.
         outputdir: str (optional, default None)
             the folder where the pipeline will write results through the
             'output_directory' pipeline control.
@@ -212,10 +219,11 @@ def scheduler(pbox, cpus=1, outputdir=None, cachedir=None, log_file=None,
 
         mem = Memory(cachedir)
         while True:
-            inputs = workers_bbox.get()
-            if inputs == FLAG_ALL_DONE:
+            action_signal = workers_bbox.get()
+            if action_signal == FLAG_ALL_DONE:
                 workers_returncode.put(FLAG_WORKER_FINISHED_PROCESSING)
                 break
+            inputs = tasks.pop()
             (process_name, box_funcdesc, bbox_inputs, box_copy,
              box_clean) = inputs
             bbox_returncode = {}
@@ -274,11 +282,15 @@ def scheduler(pbox, cpus=1, outputdir=None, cachedir=None, log_file=None,
 
     # Create the workers
     workers = []
+    # Can be used almost as a LIFO
+    manager = multiprocessing.Manager()
+    tasks = manager.list()
+    # Works as a FIFO with 1 cpu
     workers_bbox = multiprocessing.Queue()
     workers_returncode = multiprocessing.Queue()
     for index in range(cpus):
         process = multiprocessing.Process(
-            target=bbox_worker, args=(workers_bbox, workers_returncode,
+            target=bbox_worker, args=(workers_bbox, tasks, workers_returncode,
                                       outputdir, cachedir))
         process.deamon = True
         process.start()
@@ -332,9 +344,10 @@ def scheduler(pbox, cpus=1, outputdir=None, cachedir=None, log_file=None,
                         box_copy = box.inputs_to_copy
                         box_clean = box.inputs_to_clean
 
-                    # Update the worker queu
-                    workers_bbox.put((process_name, box.desc, box_inputs,
-                                      box_copy, box_clean))
+                    # Update the worker queue
+                    tasks.append((process_name, box.desc, box_inputs,
+                                  box_copy, box_clean))
+                    workers_bbox.put(FLAG_PROCESSING)
 
             # Collect the box returncodes
             wave_returncode = workers_returncode.get()
