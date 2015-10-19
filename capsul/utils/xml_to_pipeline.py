@@ -27,12 +27,13 @@ from capsul.pipeline.pipeline_nodes import PipelineNode
 from capsul.pipeline.process_iteration import ProcessIteration
 from capsul.utils.topological_sort import GraphNode
 from capsul.utils.topological_sort import Graph
+from capsul.utils.trait_utils import trait_ids
 from capsul.process import get_process_instance
 from capsul.process import Process
 from capsul.process import IProcess
 
 # TRAIT import
-from traits.api import Enum
+import traits.api as traits
 
 
 class AutoPipeline(Pipeline):
@@ -463,7 +464,7 @@ class AutoPipeline(Pipeline):
             self._links.append("{0}->{1}.{0}".format(switch_name, value))
 
         # Add a switch enum trait to select the path
-        self.add_trait(switch_name, Enum(optional=True, output=False,
+        self.add_trait(switch_name, traits.Enum(optional=True, output=False,
                                          *switch_values))
         self._switches[switch_name] = (switch_paths, switch_boxes)
 
@@ -574,8 +575,15 @@ class AutoPipeline(Pipeline):
         # Set the forced values
         process = self.nodes[box_name].process
         for name, value in optional_parameters.items():
+            # Fixme: Either issue
+            trait = process.trait(name)
+            if len(trait_ids(trait)) > 1 and value is None:
+                value = traits.Undefined
             process.set_parameter(name, value)
         for name, value in hidden_parameters.items():
+            # Fixme: Nipype None issue
+            if value is None:
+                value = traits.Undefined
             setattr(process._nipype_interface.inputs, name, value)
 
     def _add_link(self, linkdesc, linktype="link"):

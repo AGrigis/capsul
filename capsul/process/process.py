@@ -17,6 +17,7 @@ import json
 import subprocess
 import logging
 import shutil
+import traceback
 
 # Define the logger
 logger = logging.getLogger(__name__)
@@ -758,11 +759,17 @@ class Process(Controller):
             the trait value we want to set
         """
         # The Undefined trait value is None, do the replacement
-        if value is Undefined:
-            value = None
+        #if value is Undefined:
+        #    value = None
 
         # Set the new trait value
-        setattr(self, name, value)
+        try:
+            setattr(self, name, value)
+        except:
+            error = traceback.format_exc()
+            error += "Cannot set value '{0}' to parameter '{1}'.".format(
+                value, name)
+            raise ValueError(error)
 
     def get_parameter(self, name):
         """ Method to access the value of a process instance.
@@ -1056,7 +1063,7 @@ class NipypeProcess(FileCopyProcess):
             })
 
         # Add a new trait to store the processing output directory
-        super(Process, self).add_trait(
+        super(NipypeProcess, self).add_trait(
             "output_directory", Directory(None, exists=True,
                                           optional=True))
 

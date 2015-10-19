@@ -22,6 +22,7 @@ import traits.api as traits
 from .description_utils import title_for
 from .description_utils import parse_docstring
 from capsul.utils.trait_utils import clone_trait
+from capsul.utils.trait_utils import trait_ids
 from capsul.process import Process
 
 
@@ -45,9 +46,18 @@ class AutoProcess(Process):
 
             # Enthought.traits does not validate default values: reapply them
             if trait_name in self._defaults:
+                # Fixme: Either issue
+                trait = self.trait(trait_name)
+                if len(trait_ids(trait)) > 1 and self._defaults[trait_name] is None:
+                    self._defaults[trait_name] = traits.Undefined
                 self.set_parameter(trait_name, self._defaults[trait_name])
             else:
-                self.set_parameter(trait_name, None)
+                # Fixme: Either issue
+                trait = self.trait(trait_name)
+                if len(trait_ids(trait)) > 1:
+                    self.set_parameter(trait_name, traits.Undefined)
+                else:
+                    self.set_parameter(trait_name, None)
 
         # Redefine process identifier
         if hasattr(self, "_id"):
@@ -96,7 +106,8 @@ class AutoProcess(Process):
                 error = traceback.format_exc()
                 error += "From expression: {0}. ".format(expression)
                 error += ("A mandatory parameter has probably not "
-                          "been initialized.")
+                          "been initialized or an error has occured in the "
+                          "encapsulated function.")
                 raise RuntimeError(error)
         f()
 

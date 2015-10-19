@@ -20,13 +20,12 @@ logger = logging.getLogger(__name__)
 # Trait import
 from traits.api import CTrait
 
-# CAPSUL import
-from soma.controller.trait_utils import trait_ids
-from soma.controller.trait_utils import eval_trait
-
 # Capsul import
 from .process import NipypeProcess
 from capsul.utils.trait_utils import build_expression
+from capsul.utils.trait_utils import trait_ids
+from capsul.utils.trait_utils import eval_trait
+from capsul.utils.trait_utils import allow_none_trait_values
 
 
 def nipype_factory(nipype_instance):
@@ -35,8 +34,6 @@ def nipype_factory(nipype_instance):
 
     This function clone the nipye traits (also convert special traits) and
     conect the process and nipype instances traits.
-
-    A new 'output_directory' nipype input trait is created.
 
     Since nipype inputs and outputs are separated and thus can have
     the same names, the nipype process outputs are prefixed with '_'.

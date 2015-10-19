@@ -544,12 +544,12 @@ def allow_none_trait_values(trait):
                     validate, trait.item_trait)
             trait.fast_validate = types.MethodType(validate, trait)
         else:
-            trait.validate = types.MethodType(validate, trait)
+            trait.validate = types.MethodType(validate, trait) 
 
     # Either case
-    if main_id in ["Either", "TraitCompound"]:
+    if main_id in ["Either", "TraitCompound"] and handler.handlers is not None:
 
-        # Update each trait compound optional parameter
+        # Update each trait compound parameter
         for sub_trait in handler.handlers:
             allow_none_trait_values(sub_trait())
 
