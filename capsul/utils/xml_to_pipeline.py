@@ -575,15 +575,12 @@ class AutoPipeline(Pipeline):
         # Set the forced values
         process = self.nodes[box_name].process
         for name, value in optional_parameters.items():
-            # Fixme: Either issue
             trait = process.trait(name)
-            if len(trait_ids(trait)) > 1 and value is None:
-                value = traits.Undefined
+            if trait is None:
+                raise ValueError("'{0}' is not a parameter of box "
+                                 "'{1}'.".format(name, box_name))
             process.set_parameter(name, value)
         for name, value in hidden_parameters.items():
-            # Fixme: Nipype None issue
-            if value is None:
-                value = traits.Undefined
             setattr(process._nipype_interface.inputs, name, value)
 
     def _add_link(self, linkdesc, linktype="link"):

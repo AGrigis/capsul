@@ -759,8 +759,8 @@ class Process(Controller):
             the trait value we want to set
         """
         # The Undefined trait value is None, do the replacement
-        #if value is Undefined:
-        #    value = None
+        if value is None:
+            value = Undefined
 
         # Set the new trait value
         try:
@@ -784,7 +784,10 @@ class Process(Controller):
         value: object
             the trait value we want to access
         """
-        return getattr(self, name)
+        value = getattr(self, name)
+        if value is Undefined:
+            value = None
+        return value
 
     run = LateBindingProperty(
         _run_process, None, None,

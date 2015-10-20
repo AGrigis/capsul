@@ -110,7 +110,7 @@ class IProcess(Controller):
     # Public Members
     ###########################################################################
 
-    def add_trait(self, name, *trait):
+    def add_trait(self, name, trait):
         """ Add a new trait allowing None values during the validation.
 
         Parameters
@@ -121,14 +121,14 @@ class IProcess(Controller):
             a valid trait.
         """
         # Save the default value
-        default = trait[0].defaultvalue
+        default = trait.defaultvalue
 
         # Allow None as a trait value
-        if self.is_user_trait(trait[0]):
-            allow_none_trait_values(trait[0])
+        if self.is_user_trait(trait):
+            allow_none_trait_values(trait)
 
         # Inheritance: create the instance trait attribute
-        super(IProcess, self).add_trait(name, *trait)
+        super(IProcess, self).add_trait(name, trait)
 
         # Set the trait default value
         self.trait(name).defaultvalue = default
@@ -349,6 +349,8 @@ class IProcess(Controller):
             itertrait_description = ["List_" + x for x in trait_description]
             itername = "{0}{1}".format(self.iterprefix, control_name)
             trait = clone_trait(itertrait_description)
+            if len(itertrait_description) > 1:
+                trait = trait.as_ctrait()
             self.add_trait(itername, trait)
             self.trait(itername).output = False
             self.trait(itername).optional = False

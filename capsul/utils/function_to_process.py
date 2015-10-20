@@ -45,19 +45,14 @@ class AutoProcess(Process):
             self.trait(trait_name).optional = trait.optional
 
             # Enthought.traits does not validate default values: reapply them
+            trait = self.trait(trait_name)
+            if trait is None:
+                raise ValueError("'{0}' is not a parameter of box "
+                                 "'{1}'.".format(trait_name, self._id))
             if trait_name in self._defaults:
-                # Fixme: Either issue
-                trait = self.trait(trait_name)
-                if len(trait_ids(trait)) > 1 and self._defaults[trait_name] is None:
-                    self._defaults[trait_name] = traits.Undefined
                 self.set_parameter(trait_name, self._defaults[trait_name])
             else:
-                # Fixme: Either issue
-                trait = self.trait(trait_name)
-                if len(trait_ids(trait)) > 1:
-                    self.set_parameter(trait_name, traits.Undefined)
-                else:
-                    self.set_parameter(trait_name, None)
+                self.set_parameter(trait_name, None)
 
         # Redefine process identifier
         if hasattr(self, "_id"):
