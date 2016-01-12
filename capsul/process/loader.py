@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 # Caspul import
 from process import Process
+from .iterative_process import IProcess
 from nipype_process import nipype_factory
 from capsul.utils.loader import load_objects
 
@@ -68,7 +69,7 @@ def get_process_instance(process_or_id, **kwargs):
     """
     # If the function 'process_or_id' parameter is already a Process
     # instance.
-    if isinstance(process_or_id, Process):
+    if isinstance(process_or_id, (Process, IProcess)):
         result = process_or_id
 
     # If the function 'process_or_id' parameter is a Process class.
@@ -91,7 +92,7 @@ def get_process_instance(process_or_id, **kwargs):
     elif isinstance(process_or_id, basestring):
 
         # Get the class and module names from the class string description
-        id_list = process_or_id.split(".")
+        id_list = str(process_or_id).split(".")
         if id_list[-1] == "xml":
             module_name = ".".join(id_list[:-2])
             object_name = ".".join(id_list[-2:])

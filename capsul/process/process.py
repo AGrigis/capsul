@@ -14,6 +14,7 @@ from socket import getfqdn
 from datetime import datetime as datetime
 from copy import deepcopy
 import json
+import glob
 import subprocess
 import logging
 import shutil
@@ -36,6 +37,7 @@ from soma.controller.trait_utils import get_trait_desc
 
 # Capsul import
 from capsul.utils.version_utils import get_tool_version
+from capsul.utils.trait_utils import is_trait_either
 
 
 class ProcessMeta(Controller.__metaclass__):
@@ -60,8 +62,21 @@ class ProcessMeta(Controller.__metaclass__):
         # Get the process docstring
         docstring = attrs.get("__doc__", "").split("\n")
 
+        # we have to indent the note properly so that the docstring is
+        # properly displayed, and correctly processed by sphinx
+        indent = -1
+        for line in docstring[1:]:
+            lstrip = line.strip()
+            if not lstrip:  # empty lines do not influence indent
+                continue
+            lindent = line.index(line.strip())
+            if indent == -1 or lindent < indent:
+                indent = lindent
+        if indent < 0:
+            indent = 0
+
         # Complete the docstring
-        docstring += [
+        docstring += [' ' * indent + line for line in [
             "",
             ".. note::",
             "",
@@ -72,7 +87,7 @@ class ProcessMeta(Controller.__metaclass__):
             "    * Type '<{0}>.get_output_spec()' for a full description of "
             "this process output trait types.".format(name),
             ""
-        ]
+        ]]
 
         # Update the class docstring with the full process help
         attrs["__doc__"] = "\n".join(docstring)
@@ -94,11 +109,11 @@ class Process(Controller):
 
     Attributes
     ----------
-    `name` : str
+    `name`: str
         the class name.
-    `id` : str
+    `id`: str
         the string description of the class location (ie., module.class).
-    `log_file` : str (default None)
+    `log_file`: str (default None)
         if None, the log will be generated in the current directory
         otherwise it will be written in log_file path.
 
@@ -120,6 +135,7 @@ class Process(Controller):
     get_outputs
     set_parameter
     get_parameter
+
     """
     # Meta class used to complete the class docstring
     __metaclass__ = ProcessMeta
@@ -142,6 +158,9 @@ class Process(Controller):
         # Initialize the log file name
         self.log_file = None
 
+        # Define reserved control names
+        self.reserved_controls = ("nodes_activation", "selection_changed")
+
     def add_trait(self, name, trait):
         """Ensure that trait.output and trait.optional are set to a
         boolean value before calling parent class add_trait.
@@ -153,6 +172,16 @@ class Process(Controller):
             trait.output = bool(trait.output)
             trait.optional = bool(trait.optional)
         super(Process, self).add_trait(name, trait)
+
+    def traits(self, **kwargs):
+        """ Returns a dictionary containing the definitions of all of the trait
+        attributes of this object that match the set of *metadata* criteria.
+        """
+        traits = super(Process, self).traits(**kwargs)
+        for name in self.reserved_controls:
+            if name in traits:
+                traits.pop(name)
+        return traits
         
     def __call__(self, **kwargs):
         """ Method to execute the Process.
@@ -485,7 +514,7 @@ class Process(Controller):
         """
         output = {}
         for trait_name, trait in self.user_traits().iteritems():
-            if not trait.output:
+            if not trait.output and trait_name != "nodes_activation":
                 output[trait_name] = getattr(self, trait_name)
         return output
 
@@ -591,8 +620,9 @@ class Process(Controller):
         data = []
         if mandatory_items:
             for trait_name, trait in mandatory_items.iteritems():
-                trait_desc = get_trait_desc(trait_name, trait)
-                data.append(trait_desc)
+                if trait_name != "nodes_activation":
+                    trait_desc = get_trait_desc(trait_name, trait)
+                    data.append(trait_desc)
 
         # If we want to format the output nicely (rst)
         if data != []:
@@ -686,11 +716,9 @@ class Process(Controller):
         value: object (mandatory)
             the trait value we want to set
         """
-        # Detect File and Directory trait types with None value
-        if value is None and is_trait_pathname(self.trait(name)):
-
-            # The None trait value is _Undefined, do the replacement
-            value = _Undefined()
+        # The None trait value is Undefined, do the replacement
+        if value is None:
+            value = Undefined
 
         # Set the new trait value
         setattr(self, name, value)
@@ -881,6 +909,15 @@ class FileCopyProcess(Process):
                 out = os.path.join(destdir, fname)
                 shutil.copy2(python_object, out)
 
+                # Copy associated .mat files
+                name = fname.split(".")[0]
+                matfnames = glob.glob(os.path.join(
+                    os.path.dirname(python_object), name + ".*"))
+                for matfname in matfnames:
+                    extrafname = os.path.basename(matfname)
+                    extraout = os.path.join(destdir, extrafname)
+                    shutil.copy2(matfname, extraout) 
+
         return out
 
     def _get_process_arguments(self):
@@ -952,6 +989,7 @@ class NipypeProcess(FileCopyProcess):
         self._nipype_module = nipype_instance.__class__.__module__
         self._nipype_class = nipype_instance.__class__.__name__
         self._nipype_interface_name = self._nipype_module.split(".")[2]
+        self.desc = self._nipype_module + "." + self._nipype_class
 
         # Inheritance: activate input files copy for spm interfaces.
         if self._nipype_interface_name == "spm":
@@ -1017,8 +1055,9 @@ class NipypeProcess(FileCopyProcess):
         results:  ProcessResult object
             contains all execution information
         """
-        # Set the interface output directory just before the execution
-        self._nipype_interface.inputs.output_directory = self.output_directory
+        # Single task worker: change worker current working
+        # directory safely (usefull for nipype spm interfaces)
+        os.chdir(self.output_directory)
 
         # Inheritance
         if self._nipype_interface_name == "spm":
@@ -1074,7 +1113,6 @@ class NipypeProcess(FileCopyProcess):
             the output directory
         """
         self.output_directory = out_dir
-        self._nipype_interface.inputs.output_directory = out_dir
 
     def _run_process(self):
         """ Method that do the processings when the instance is called.

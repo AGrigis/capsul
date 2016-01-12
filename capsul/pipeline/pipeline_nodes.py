@@ -445,6 +445,9 @@ class ProcessNode(Node):
         output: object
             the plug value
         """
+        trait = self.get_trait(plug_name)
+        if not hasattr(trait, "handler"):
+            raise Exception("'{0}' plug is not defined.".format(plug_name))
         if not isinstance(self.get_trait(plug_name).handler,
                           traits.Event):
             return getattr(self.process, plug_name)
@@ -465,7 +468,7 @@ class ProcessNode(Node):
             value = Undefined
         elif is_trait_pathname(self.process.trait(plug_name)) and value is None:
             value = Undefined
-        setattr(self.process, plug_name, value)
+        self.process.set_parameter(plug_name, value)
 
     def get_trait(self, trait_name):
         """ Return the desired trait
