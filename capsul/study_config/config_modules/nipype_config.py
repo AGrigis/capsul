@@ -38,6 +38,7 @@ class NipypeConfig(StudyConfigModule):
         """ Set up Nipype environment variables according to current
         configuration.
         """
+        print self.study_config.use_nipype
         if self.study_config.use_nipype is False:
             # Configuration is explicitely asking not to use Nipype
             return
@@ -51,7 +52,7 @@ class NipypeConfig(StudyConfigModule):
             # done.
             force_configuration = False
 
-        # Configure matlab for nipype
+        # Configure matlab for nipype if requested
         if self.study_config.use_matlab:
             matlab.MatlabCommand.set_default_matlab_cmd(
                 self.study_config.matlab_exec + " -nodesktop -nosplash")
@@ -68,7 +69,13 @@ class NipypeConfig(StudyConfigModule):
             else:
                 matlab.MatlabCommand.set_default_paths(
                     self.study_config.spm_directory)
-                spm.SPMCommand.set_mlab_paths(matlab_cmd="", use_mcr=False)           
+                spm.SPMCommand.set_mlab_paths(matlab_cmd="", use_mcr=False)
+
+        # Configure nipype with spm standalone
+        if self.study_config.spm_standalone:
+            spm.SPMCommand.set_mlab_paths(
+                matlab_cmd="%s run script" % self.study_config.spm_exec,
+                use_mcr=True)  
 
         self.study_config.use_nipype = True
 
