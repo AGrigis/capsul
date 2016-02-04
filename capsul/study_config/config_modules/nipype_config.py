@@ -38,7 +38,6 @@ class NipypeConfig(StudyConfigModule):
         """ Set up Nipype environment variables according to current
         configuration.
         """
-        print self.study_config.use_nipype
         if self.study_config.use_nipype is False:
             # Configuration is explicitely asking not to use Nipype
             return

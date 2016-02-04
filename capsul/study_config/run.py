@@ -189,7 +189,7 @@ def scheduler(pbox, cpus=1, outputdir=None, cachedir=None, log_file=None,
     # The worker function of a capsul.Pocess, invoked in a
     # multiprocessing.Process
     def bbox_worker(workers_bbox, workers_returncode, outputdir=None,
-                    cachedir=None, verbose=1):
+                    cachedir=None, verbose=verbose):
         """ The worker.
 
         Parameters
